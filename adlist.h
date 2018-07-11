@@ -33,18 +33,21 @@
 
 /* Node, List, and Iterator are the only data structures used currently. */
 
-typedef struct listNode {
+typedef struct listNode
+{
     struct listNode *prev;
     struct listNode *next;
     void *value;
 } listNode;
 
-typedef struct listIter {
+typedef struct listIter
+{
     listNode *next;
     int direction;
 } listIter;
 
-typedef struct hilist {
+typedef struct hilist
+{
     listNode *head;
     listNode *tail;
     void *(*dup)(void *ptr);

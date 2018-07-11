@@ -42,14 +42,16 @@ struct dict; /* dictionary header is included in async.c */
 
 /* Reply callback prototype and container */
 typedef void (redisCallbackFn)(struct redisAsyncContext*, void*, void*);
-typedef struct redisCallback {
+typedef struct redisCallback
+{
     struct redisCallback *next; /* simple singly linked list */
     redisCallbackFn *fn;
     void *privdata;
 } redisCallback;
 
 /* List of callbacks for either regular replies or pub/sub */
-typedef struct redisCallbackList {
+typedef struct redisCallbackList
+{
     redisCallback *head, *tail;
 } redisCallbackList;
 
@@ -58,7 +60,8 @@ typedef void (redisDisconnectCallback)(const struct redisAsyncContext*, int stat
 typedef void (redisConnectCallback)(const struct redisAsyncContext*, int status);
 
 /* Context for an async connection to Redis */
-typedef struct redisAsyncContext {
+typedef struct redisAsyncContext
+{
     /* Hold the regular context, so it can be realloc'ed. */
     redisContext c;
 
@@ -71,7 +74,8 @@ typedef struct redisAsyncContext {
     void (*dataHandler)(struct redisAsyncContext* ac);
 
     /* Event library data and hooks */
-    struct {
+    struct
+    {
         void *data;
 
         /* Hooks that are called when the library expects to start
@@ -94,7 +98,8 @@ typedef struct redisAsyncContext {
     redisCallbackList replies;
 
     /* Subscription callbacks */
-    struct {
+    struct
+    {
         redisCallbackList invalid;
         struct dict *channels;
         struct dict *patterns;
@@ -105,7 +110,7 @@ typedef struct redisAsyncContext {
 redisAsyncContext *redisAsyncConnect(const char *ip, int port);
 redisAsyncContext *redisAsyncConnectBind(const char *ip, int port, const char *source_addr);
 redisAsyncContext *redisAsyncConnectBindWithReuse(const char *ip, int port,
-                                                  const char *source_addr);
+        const char *source_addr);
 redisAsyncContext *redisAsyncConnectUnix(const char *path);
 int redisAsyncSetConnectCallback(redisAsyncContext *ac, redisConnectCallback *fn);
 int redisAsyncSetDisconnectCallback(redisAsyncContext *ac, redisDisconnectCallback *fn);

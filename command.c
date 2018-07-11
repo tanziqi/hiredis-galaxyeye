@@ -16,9 +16,12 @@ static uint64_t cmd_id = 0;          /* command id counter */
 static int
 redis_argz(struct cmd *r)
 {
-    switch (r->type) {
+    switch (r->type)
+    {
     case CMD_REQ_REDIS_PING:
     case CMD_REQ_REDIS_QUIT:
+
+        //case CMD_REQ_REDIS_SCRIPTFLUSH:
         return 1;
 
     default:
@@ -35,7 +38,8 @@ redis_argz(struct cmd *r)
 static int
 redis_arg0(struct cmd *r)
 {
-    switch (r->type) {
+    switch (r->type)
+    {
     case CMD_REQ_REDIS_EXISTS:
     case CMD_REQ_REDIS_PERSIST:
     case CMD_REQ_REDIS_PTTL:
@@ -81,7 +85,8 @@ redis_arg0(struct cmd *r)
 static int
 redis_arg1(struct cmd *r)
 {
-    switch (r->type) {
+    switch (r->type)
+    {
     case CMD_REQ_REDIS_EXPIRE:
     case CMD_REQ_REDIS_EXPIREAT:
     case CMD_REQ_REDIS_PEXPIRE:
@@ -124,7 +129,8 @@ redis_arg1(struct cmd *r)
 static int
 redis_arg2(struct cmd *r)
 {
-    switch (r->type) {
+    switch (r->type)
+    {
     case CMD_REQ_REDIS_GETRANGE:
     case CMD_REQ_REDIS_PSETEX:
     case CMD_REQ_REDIS_SETBIT:
@@ -167,7 +173,8 @@ redis_arg2(struct cmd *r)
 static int
 redis_arg3(struct cmd *r)
 {
-    switch (r->type) {
+    switch (r->type)
+    {
     case CMD_REQ_REDIS_LINSERT:
         return 1;
 
@@ -185,7 +192,8 @@ redis_arg3(struct cmd *r)
 static int
 redis_argn(struct cmd *r)
 {
-    switch (r->type) {
+    switch (r->type)
+    {
     case CMD_REQ_REDIS_BITCOUNT:
 
     case CMD_REQ_REDIS_SET:
@@ -237,7 +245,8 @@ redis_argn(struct cmd *r)
 static int
 redis_argx(struct cmd *r)
 {
-    switch (r->type) {
+    switch (r->type)
+    {
     case CMD_REQ_REDIS_MGET:
     case CMD_REQ_REDIS_DEL:
         return 1;
@@ -256,7 +265,8 @@ redis_argx(struct cmd *r)
 static int
 redis_argkvx(struct cmd *r)
 {
-    switch (r->type) {
+    switch (r->type)
+    {
     case CMD_REQ_REDIS_MSET:
         return 1;
 
@@ -276,7 +286,8 @@ redis_argkvx(struct cmd *r)
 static int
 redis_argeval(struct cmd *r)
 {
-    switch (r->type) {
+    switch (r->type)
+    {
     case CMD_REQ_REDIS_EVAL:
     case CMD_REQ_REDIS_EVALSHA:
         return 1;
@@ -288,6 +299,52 @@ redis_argeval(struct cmd *r)
     return 0;
 }
 
+static int
+redis_argscript(struct cmd *r)
+{
+    switch (r->type)
+    {
+    case CMD_REQ_REDIS_SCRIPT:
+        return 1;
+
+    default:
+        break;
+    }
+
+    return 0;
+}
+
+static int
+redis_argscpz(struct cmd *r)
+{
+    switch (r->type)
+    {
+    case CMD_REQ_REDIS_SCRIPTFLUSH:
+        //case CMD_REQ_REDIS_SCRIPTKILL:
+        return 1;
+
+    default:
+        break;
+    }
+
+    return 0;
+}
+
+static int
+redis_argscp1(struct cmd *r)
+{
+    switch (r->type)
+    {
+    case CMD_REQ_REDIS_SCRIPTLOAD:
+        //case CMD_REQ_REDIS_SCRIPTEXISTS:
+        return 1;
+
+    default:
+        break;
+    }
+
+    return 0;
+}
 /*
  * Reference: http://redis.io/topics/protocol
  *
@@ -315,13 +372,17 @@ redis_argeval(struct cmd *r)
 void
 redis_parse_cmd(struct cmd *r)
 {
+    char *scp_key_loc = NULL;//删key
+    size_t scp_key_len = 0;
+
     int len;
     char *p, *m, *token = NULL;
     char *cmd_end;
     char ch;
     uint32_t rlen = 0;  /* running length in parsing fsa */
     uint32_t rnarg = 0; /* running # arg used by parsing fsa */
-    enum {
+    enum
+    {
         SW_START,
         SW_NARG,
         SW_NARG_LF,
@@ -358,15 +419,19 @@ redis_parse_cmd(struct cmd *r)
     ASSERT(state >= SW_START && state < SW_SENTINEL);
     ASSERT(r->cmd != NULL && r->clen > 0);
 
-    for (p = r->cmd; p < cmd_end; p++) {
+    for (p = r->cmd; p < cmd_end; p++)
+    {
         ch = *p;
 
-        switch (state) {
+        switch (state)
+        {
 
         case SW_START:
         case SW_NARG:
-            if (token == NULL) {
-                if (ch != '*') {
+            if (token == NULL)
+            {
+                if (ch != '*')
+                {
                     goto error;
                 }
                 token = p;
@@ -374,24 +439,32 @@ redis_parse_cmd(struct cmd *r)
                 r->narg_start = p;
                 rnarg = 0;
                 state = SW_NARG;
-            } else if (isdigit(ch)) {
+            }
+            else if (isdigit(ch))
+            {
                 rnarg = rnarg * 10 + (uint32_t)(ch - '0');
-            } else if (ch == CR) {
-                if (rnarg == 0) {
+            }
+            else if (ch == CR)
+            {
+                if (rnarg == 0)
+                {
                     goto error;
                 }
                 r->narg = rnarg;
                 r->narg_end = p;
                 token = NULL;
                 state = SW_NARG_LF;
-            } else {
+            }
+            else
+            {
                 goto error;
             }
 
             break;
 
         case SW_NARG_LF:
-            switch (ch) {
+            switch (ch)
+            {
             case LF:
                 state = SW_REQ_TYPE_LEN;
                 break;
@@ -403,29 +476,39 @@ redis_parse_cmd(struct cmd *r)
             break;
 
         case SW_REQ_TYPE_LEN:
-            if (token == NULL) {
-                if (ch != '$') {
+            if (token == NULL)
+            {
+                if (ch != '$')
+                {
                     goto error;
                 }
                 token = p;
                 rlen = 0;
-            } else if (isdigit(ch)) {
+            }
+            else if (isdigit(ch))
+            {
                 rlen = rlen * 10 + (uint32_t)(ch - '0');
-            } else if (ch == CR) {
-                if (rlen == 0 || rnarg == 0) {
+            }
+            else if (ch == CR)
+            {
+                if (rlen == 0 || rnarg == 0)
+                {
                     goto error;
                 }
                 rnarg--;
                 token = NULL;
                 state = SW_REQ_TYPE_LEN_LF;
-            } else {
+            }
+            else
+            {
                 goto error;
             }
 
             break;
 
         case SW_REQ_TYPE_LEN_LF:
-            switch (ch) {
+            switch (ch)
+            {
             case LF:
                 state = SW_REQ_TYPE;
                 break;
@@ -437,19 +520,22 @@ redis_parse_cmd(struct cmd *r)
             break;
 
         case SW_REQ_TYPE:
-            if (token == NULL) {
+            if (token == NULL)
+            {
                 token = p;
             }
 
             m = token + rlen;
-            if (m >= cmd_end) {
+            if (m >= cmd_end)
+            {
                 //m = cmd_end - 1;
                 //p = m;
                 //break;
                 goto error;
             }
 
-            if (*m != CR) {
+            if (*m != CR)
+            {
                 goto error;
             }
 
@@ -459,25 +545,30 @@ redis_parse_cmd(struct cmd *r)
             token = NULL;
             r->type = CMD_UNKNOWN;
 
-            switch (p - m) {
+            switch (p - m)
+            {
 
             case 3:
-                if (str3icmp(m, 'g', 'e', 't')) {
+                if (str3icmp(m, 'g', 'e', 't'))
+                {
                     r->type = CMD_REQ_REDIS_GET;
                     break;
                 }
 
-                if (str3icmp(m, 's', 'e', 't')) {
+                if (str3icmp(m, 's', 'e', 't'))
+                {
                     r->type = CMD_REQ_REDIS_SET;
                     break;
                 }
 
-                if (str3icmp(m, 't', 't', 'l')) {
+                if (str3icmp(m, 't', 't', 'l'))
+                {
                     r->type = CMD_REQ_REDIS_TTL;
                     break;
                 }
 
-                if (str3icmp(m, 'd', 'e', 'l')) {
+                if (str3icmp(m, 'd', 'e', 'l'))
+                {
                     r->type = CMD_REQ_REDIS_DEL;
                     break;
                 }
@@ -485,133 +576,159 @@ redis_parse_cmd(struct cmd *r)
                 break;
 
             case 4:
-                if (str4icmp(m, 'p', 't', 't', 'l')) {
+                if (str4icmp(m, 'p', 't', 't', 'l'))
+                {
                     r->type = CMD_REQ_REDIS_PTTL;
                     break;
                 }
 
-                if (str4icmp(m, 'd', 'e', 'c', 'r')) {
+                if (str4icmp(m, 'd', 'e', 'c', 'r'))
+                {
                     r->type = CMD_REQ_REDIS_DECR;
                     break;
                 }
 
-                if (str4icmp(m, 'd', 'u', 'm', 'p')) {
+                if (str4icmp(m, 'd', 'u', 'm', 'p'))
+                {
                     r->type = CMD_REQ_REDIS_DUMP;
                     break;
                 }
 
-                if (str4icmp(m, 'h', 'd', 'e', 'l')) {
+                if (str4icmp(m, 'h', 'd', 'e', 'l'))
+                {
                     r->type = CMD_REQ_REDIS_HDEL;
                     break;
                 }
 
-                if (str4icmp(m, 'h', 'g', 'e', 't')) {
+                if (str4icmp(m, 'h', 'g', 'e', 't'))
+                {
                     r->type = CMD_REQ_REDIS_HGET;
                     break;
                 }
 
-                if (str4icmp(m, 'h', 'l', 'e', 'n')) {
+                if (str4icmp(m, 'h', 'l', 'e', 'n'))
+                {
                     r->type = CMD_REQ_REDIS_HLEN;
                     break;
                 }
 
-                if (str4icmp(m, 'h', 's', 'e', 't')) {
+                if (str4icmp(m, 'h', 's', 'e', 't'))
+                {
                     r->type = CMD_REQ_REDIS_HSET;
                     break;
                 }
 
-                if (str4icmp(m, 'i', 'n', 'c', 'r')) {
+                if (str4icmp(m, 'i', 'n', 'c', 'r'))
+                {
                     r->type = CMD_REQ_REDIS_INCR;
                     break;
                 }
 
-                if (str4icmp(m, 'l', 'l', 'e', 'n')) {
+                if (str4icmp(m, 'l', 'l', 'e', 'n'))
+                {
                     r->type = CMD_REQ_REDIS_LLEN;
                     break;
                 }
 
-                if (str4icmp(m, 'l', 'p', 'o', 'p')) {
+                if (str4icmp(m, 'l', 'p', 'o', 'p'))
+                {
                     r->type = CMD_REQ_REDIS_LPOP;
                     break;
                 }
 
-                if (str4icmp(m, 'l', 'r', 'e', 'm')) {
+                if (str4icmp(m, 'l', 'r', 'e', 'm'))
+                {
                     r->type = CMD_REQ_REDIS_LREM;
                     break;
                 }
 
-                if (str4icmp(m, 'l', 's', 'e', 't')) {
+                if (str4icmp(m, 'l', 's', 'e', 't'))
+                {
                     r->type = CMD_REQ_REDIS_LSET;
                     break;
                 }
 
-                if (str4icmp(m, 'r', 'p', 'o', 'p')) {
+                if (str4icmp(m, 'r', 'p', 'o', 'p'))
+                {
                     r->type = CMD_REQ_REDIS_RPOP;
                     break;
                 }
 
-                if (str4icmp(m, 's', 'a', 'd', 'd')) {
+                if (str4icmp(m, 's', 'a', 'd', 'd'))
+                {
                     r->type = CMD_REQ_REDIS_SADD;
                     break;
                 }
 
-                if (str4icmp(m, 's', 'p', 'o', 'p')) {
+                if (str4icmp(m, 's', 'p', 'o', 'p'))
+                {
                     r->type = CMD_REQ_REDIS_SPOP;
                     break;
                 }
 
-                if (str4icmp(m, 's', 'r', 'e', 'm')) {
+                if (str4icmp(m, 's', 'r', 'e', 'm'))
+                {
                     r->type = CMD_REQ_REDIS_SREM;
                     break;
                 }
 
-                if (str4icmp(m, 't', 'y', 'p', 'e')) {
+                if (str4icmp(m, 't', 'y', 'p', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_TYPE;
                     break;
                 }
 
-                if (str4icmp(m, 'm', 'g', 'e', 't')) {
+                if (str4icmp(m, 'm', 'g', 'e', 't'))
+                {
                     r->type = CMD_REQ_REDIS_MGET;
                     break;
                 }
-                if (str4icmp(m, 'm', 's', 'e', 't')) {
+                if (str4icmp(m, 'm', 's', 'e', 't'))
+                {
                     r->type = CMD_REQ_REDIS_MSET;
                     break;
                 }
 
-                if (str4icmp(m, 'z', 'a', 'd', 'd')) {
+                if (str4icmp(m, 'z', 'a', 'd', 'd'))
+                {
                     r->type = CMD_REQ_REDIS_ZADD;
                     break;
                 }
 
-                if (str4icmp(m, 'z', 'r', 'e', 'm')) {
+                if (str4icmp(m, 'z', 'r', 'e', 'm'))
+                {
                     r->type = CMD_REQ_REDIS_ZREM;
                     break;
                 }
 
-                if (str4icmp(m, 'e', 'v', 'a', 'l')) {
+                if (str4icmp(m, 'e', 'v', 'a', 'l'))
+                {
                     r->type = CMD_REQ_REDIS_EVAL;
                     break;
                 }
 
-                if (str4icmp(m, 's', 'o', 'r', 't')) {
+                if (str4icmp(m, 's', 'o', 'r', 't'))
+                {
                     r->type = CMD_REQ_REDIS_SORT;
                     break;
                 }
 
-                if (str4icmp(m, 'p', 'i', 'n', 'g')) {
+                if (str4icmp(m, 'p', 'i', 'n', 'g'))
+                {
                     r->type = CMD_REQ_REDIS_PING;
                     r->noforward = 1;
                     break;
                 }
 
-                if (str4icmp(m, 'q', 'u', 'i', 't')) {
+                if (str4icmp(m, 'q', 'u', 'i', 't'))
+                {
                     r->type = CMD_REQ_REDIS_QUIT;
                     r->quit = 1;
                     break;
                 }
 
-                if (str4icmp(m, 'a', 'u', 't', 'h')) {
+                if (str4icmp(m, 'a', 'u', 't', 'h'))
+                {
                     r->type = CMD_REQ_REDIS_AUTH;
                     r->noforward = 1;
                     break;
@@ -620,92 +737,110 @@ redis_parse_cmd(struct cmd *r)
                 break;
 
             case 5:
-                if (str5icmp(m, 'h', 'k', 'e', 'y', 's')) {
+                if (str5icmp(m, 'h', 'k', 'e', 'y', 's'))
+                {
                     r->type = CMD_REQ_REDIS_HKEYS;
                     break;
                 }
 
-                if (str5icmp(m, 'h', 'm', 'g', 'e', 't')) {
+                if (str5icmp(m, 'h', 'm', 'g', 'e', 't'))
+                {
                     r->type = CMD_REQ_REDIS_HMGET;
                     break;
                 }
 
-                if (str5icmp(m, 'h', 'm', 's', 'e', 't')) {
+                if (str5icmp(m, 'h', 'm', 's', 'e', 't'))
+                {
                     r->type = CMD_REQ_REDIS_HMSET;
                     break;
                 }
 
-                if (str5icmp(m, 'h', 'v', 'a', 'l', 's')) {
+                if (str5icmp(m, 'h', 'v', 'a', 'l', 's'))
+                {
                     r->type = CMD_REQ_REDIS_HVALS;
                     break;
                 }
 
-                if (str5icmp(m, 'h', 's', 'c', 'a', 'n')) {
+                if (str5icmp(m, 'h', 's', 'c', 'a', 'n'))
+                {
                     r->type = CMD_REQ_REDIS_HSCAN;
                     break;
                 }
 
-                if (str5icmp(m, 'l', 'p', 'u', 's', 'h')) {
+                if (str5icmp(m, 'l', 'p', 'u', 's', 'h'))
+                {
                     r->type = CMD_REQ_REDIS_LPUSH;
                     break;
                 }
 
-                if (str5icmp(m, 'l', 't', 'r', 'i', 'm')) {
+                if (str5icmp(m, 'l', 't', 'r', 'i', 'm'))
+                {
                     r->type = CMD_REQ_REDIS_LTRIM;
                     break;
                 }
 
-                if (str5icmp(m, 'r', 'p', 'u', 's', 'h')) {
+                if (str5icmp(m, 'r', 'p', 'u', 's', 'h'))
+                {
                     r->type = CMD_REQ_REDIS_RPUSH;
                     break;
                 }
 
-                if (str5icmp(m, 's', 'c', 'a', 'r', 'd')) {
+                if (str5icmp(m, 's', 'c', 'a', 'r', 'd'))
+                {
                     r->type = CMD_REQ_REDIS_SCARD;
                     break;
                 }
 
-                if (str5icmp(m, 's', 'd', 'i', 'f', 'f')) {
+                if (str5icmp(m, 's', 'd', 'i', 'f', 'f'))
+                {
                     r->type = CMD_REQ_REDIS_SDIFF;
                     break;
                 }
 
-                if (str5icmp(m, 's', 'e', 't', 'e', 'x')) {
+                if (str5icmp(m, 's', 'e', 't', 'e', 'x'))
+                {
                     r->type = CMD_REQ_REDIS_SETEX;
                     break;
                 }
 
-                if (str5icmp(m, 's', 'e', 't', 'n', 'x')) {
+                if (str5icmp(m, 's', 'e', 't', 'n', 'x'))
+                {
                     r->type = CMD_REQ_REDIS_SETNX;
                     break;
                 }
 
-                if (str5icmp(m, 's', 'm', 'o', 'v', 'e')) {
+                if (str5icmp(m, 's', 'm', 'o', 'v', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_SMOVE;
                     break;
                 }
 
-                if (str5icmp(m, 's', 's', 'c', 'a', 'n')) {
+                if (str5icmp(m, 's', 's', 'c', 'a', 'n'))
+                {
                     r->type = CMD_REQ_REDIS_SSCAN;
                     break;
                 }
 
-                if (str5icmp(m, 'z', 'c', 'a', 'r', 'd')) {
+                if (str5icmp(m, 'z', 'c', 'a', 'r', 'd'))
+                {
                     r->type = CMD_REQ_REDIS_ZCARD;
                     break;
                 }
 
-                if (str5icmp(m, 'z', 'r', 'a', 'n', 'k')) {
+                if (str5icmp(m, 'z', 'r', 'a', 'n', 'k'))
+                {
                     r->type = CMD_REQ_REDIS_ZRANK;
                     break;
                 }
 
-                if (str5icmp(m, 'z', 's', 'c', 'a', 'n')) {
+                if (str5icmp(m, 'z', 's', 'c', 'a', 'n'))
+                {
                     r->type = CMD_REQ_REDIS_ZSCAN;
                     break;
                 }
 
-                if (str5icmp(m, 'p', 'f', 'a', 'd', 'd')) {
+                if (str5icmp(m, 'p', 'f', 'a', 'd', 'd'))
+                {
                     r->type = CMD_REQ_REDIS_PFADD;
                     break;
                 }
@@ -713,102 +848,128 @@ redis_parse_cmd(struct cmd *r)
                 break;
 
             case 6:
-                if (str6icmp(m, 'a', 'p', 'p', 'e', 'n', 'd')) {
+                if (str6icmp(m, 's', 'c', 'r', 'i', 'p', 't'))
+                {
+                    r->type = CMD_REQ_REDIS_SCRIPT;
+                    break;
+                }
+
+                if (str6icmp(m, 'a', 'p', 'p', 'e', 'n', 'd'))
+                {
                     r->type = CMD_REQ_REDIS_APPEND;
                     break;
                 }
 
-                if (str6icmp(m, 'd', 'e', 'c', 'r', 'b', 'y')) {
+                if (str6icmp(m, 'd', 'e', 'c', 'r', 'b', 'y'))
+                {
                     r->type = CMD_REQ_REDIS_DECRBY;
                     break;
                 }
 
-                if (str6icmp(m, 'e', 'x', 'i', 's', 't', 's')) {
+                if (str6icmp(m, 'e', 'x', 'i', 's', 't', 's'))
+                {
                     r->type = CMD_REQ_REDIS_EXISTS;
                     break;
                 }
 
-                if (str6icmp(m, 'e', 'x', 'p', 'i', 'r', 'e')) {
+                if (str6icmp(m, 'e', 'x', 'p', 'i', 'r', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_EXPIRE;
                     break;
                 }
 
-                if (str6icmp(m, 'g', 'e', 't', 'b', 'i', 't')) {
+                if (str6icmp(m, 'g', 'e', 't', 'b', 'i', 't'))
+                {
                     r->type = CMD_REQ_REDIS_GETBIT;
                     break;
                 }
 
-                if (str6icmp(m, 'g', 'e', 't', 's', 'e', 't')) {
+                if (str6icmp(m, 'g', 'e', 't', 's', 'e', 't'))
+                {
                     r->type = CMD_REQ_REDIS_GETSET;
                     break;
                 }
 
-                if (str6icmp(m, 'p', 's', 'e', 't', 'e', 'x')) {
+                if (str6icmp(m, 'p', 's', 'e', 't', 'e', 'x'))
+                {
                     r->type = CMD_REQ_REDIS_PSETEX;
                     break;
                 }
 
-                if (str6icmp(m, 'h', 's', 'e', 't', 'n', 'x')) {
+                if (str6icmp(m, 'h', 's', 'e', 't', 'n', 'x'))
+                {
                     r->type = CMD_REQ_REDIS_HSETNX;
                     break;
                 }
 
-                if (str6icmp(m, 'i', 'n', 'c', 'r', 'b', 'y')) {
+                if (str6icmp(m, 'i', 'n', 'c', 'r', 'b', 'y'))
+                {
                     r->type = CMD_REQ_REDIS_INCRBY;
                     break;
                 }
 
-                if (str6icmp(m, 'l', 'i', 'n', 'd', 'e', 'x')) {
+                if (str6icmp(m, 'l', 'i', 'n', 'd', 'e', 'x'))
+                {
                     r->type = CMD_REQ_REDIS_LINDEX;
                     break;
                 }
 
-                if (str6icmp(m, 'l', 'p', 'u', 's', 'h', 'x')) {
+                if (str6icmp(m, 'l', 'p', 'u', 's', 'h', 'x'))
+                {
                     r->type = CMD_REQ_REDIS_LPUSHX;
                     break;
                 }
 
-                if (str6icmp(m, 'l', 'r', 'a', 'n', 'g', 'e')) {
+                if (str6icmp(m, 'l', 'r', 'a', 'n', 'g', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_LRANGE;
                     break;
                 }
 
-                if (str6icmp(m, 'r', 'p', 'u', 's', 'h', 'x')) {
+                if (str6icmp(m, 'r', 'p', 'u', 's', 'h', 'x'))
+                {
                     r->type = CMD_REQ_REDIS_RPUSHX;
                     break;
                 }
 
-                if (str6icmp(m, 's', 'e', 't', 'b', 'i', 't')) {
+                if (str6icmp(m, 's', 'e', 't', 'b', 'i', 't'))
+                {
                     r->type = CMD_REQ_REDIS_SETBIT;
                     break;
                 }
 
-                if (str6icmp(m, 's', 'i', 'n', 't', 'e', 'r')) {
+                if (str6icmp(m, 's', 'i', 'n', 't', 'e', 'r'))
+                {
                     r->type = CMD_REQ_REDIS_SINTER;
                     break;
                 }
 
-                if (str6icmp(m, 's', 't', 'r', 'l', 'e', 'n')) {
+                if (str6icmp(m, 's', 't', 'r', 'l', 'e', 'n'))
+                {
                     r->type = CMD_REQ_REDIS_STRLEN;
                     break;
                 }
 
-                if (str6icmp(m, 's', 'u', 'n', 'i', 'o', 'n')) {
+                if (str6icmp(m, 's', 'u', 'n', 'i', 'o', 'n'))
+                {
                     r->type = CMD_REQ_REDIS_SUNION;
                     break;
                 }
 
-                if (str6icmp(m, 'z', 'c', 'o', 'u', 'n', 't')) {
+                if (str6icmp(m, 'z', 'c', 'o', 'u', 'n', 't'))
+                {
                     r->type = CMD_REQ_REDIS_ZCOUNT;
                     break;
                 }
 
-                if (str6icmp(m, 'z', 'r', 'a', 'n', 'g', 'e')) {
+                if (str6icmp(m, 'z', 'r', 'a', 'n', 'g', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_ZRANGE;
                     break;
                 }
 
-                if (str6icmp(m, 'z', 's', 'c', 'o', 'r', 'e')) {
+                if (str6icmp(m, 'z', 's', 'c', 'o', 'r', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_ZSCORE;
                     break;
                 }
@@ -816,57 +977,68 @@ redis_parse_cmd(struct cmd *r)
                 break;
 
             case 7:
-                if (str7icmp(m, 'p', 'e', 'r', 's', 'i', 's', 't')) {
+                if (str7icmp(m, 'p', 'e', 'r', 's', 'i', 's', 't'))
+                {
                     r->type = CMD_REQ_REDIS_PERSIST;
                     break;
                 }
 
-                if (str7icmp(m, 'p', 'e', 'x', 'p', 'i', 'r', 'e')) {
+                if (str7icmp(m, 'p', 'e', 'x', 'p', 'i', 'r', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_PEXPIRE;
                     break;
                 }
 
-                if (str7icmp(m, 'h', 'e', 'x', 'i', 's', 't', 's')) {
+                if (str7icmp(m, 'h', 'e', 'x', 'i', 's', 't', 's'))
+                {
                     r->type = CMD_REQ_REDIS_HEXISTS;
                     break;
                 }
 
-                if (str7icmp(m, 'h', 'g', 'e', 't', 'a', 'l', 'l')) {
+                if (str7icmp(m, 'h', 'g', 'e', 't', 'a', 'l', 'l'))
+                {
                     r->type = CMD_REQ_REDIS_HGETALL;
                     break;
                 }
 
-                if (str7icmp(m, 'h', 'i', 'n', 'c', 'r', 'b', 'y')) {
+                if (str7icmp(m, 'h', 'i', 'n', 'c', 'r', 'b', 'y'))
+                {
                     r->type = CMD_REQ_REDIS_HINCRBY;
                     break;
                 }
 
-                if (str7icmp(m, 'l', 'i', 'n', 's', 'e', 'r', 't')) {
+                if (str7icmp(m, 'l', 'i', 'n', 's', 'e', 'r', 't'))
+                {
                     r->type = CMD_REQ_REDIS_LINSERT;
                     break;
                 }
 
-                if (str7icmp(m, 'z', 'i', 'n', 'c', 'r', 'b', 'y')) {
+                if (str7icmp(m, 'z', 'i', 'n', 'c', 'r', 'b', 'y'))
+                {
                     r->type = CMD_REQ_REDIS_ZINCRBY;
                     break;
                 }
 
-                if (str7icmp(m, 'e', 'v', 'a', 'l', 's', 'h', 'a')) {
+                if (str7icmp(m, 'e', 'v', 'a', 'l', 's', 'h', 'a'))
+                {
                     r->type = CMD_REQ_REDIS_EVALSHA;
                     break;
                 }
 
-                if (str7icmp(m, 'r', 'e', 's', 't', 'o', 'r', 'e')) {
+                if (str7icmp(m, 'r', 'e', 's', 't', 'o', 'r', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_RESTORE;
                     break;
                 }
 
-                if (str7icmp(m, 'p', 'f', 'c', 'o', 'u', 'n', 't')) {
+                if (str7icmp(m, 'p', 'f', 'c', 'o', 'u', 'n', 't'))
+                {
                     r->type = CMD_REQ_REDIS_PFCOUNT;
                     break;
                 }
 
-                if (str7icmp(m, 'p', 'f', 'm', 'e', 'r', 'g', 'e')) {
+                if (str7icmp(m, 'p', 'f', 'm', 'e', 'r', 'g', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_PFMERGE;
                     break;
                 }
@@ -874,32 +1046,38 @@ redis_parse_cmd(struct cmd *r)
                 break;
 
             case 8:
-                if (str8icmp(m, 'e', 'x', 'p', 'i', 'r', 'e', 'a', 't')) {
+                if (str8icmp(m, 'e', 'x', 'p', 'i', 'r', 'e', 'a', 't'))
+                {
                     r->type = CMD_REQ_REDIS_EXPIREAT;
                     break;
                 }
 
-                if (str8icmp(m, 'b', 'i', 't', 'c', 'o', 'u', 'n', 't')) {
+                if (str8icmp(m, 'b', 'i', 't', 'c', 'o', 'u', 'n', 't'))
+                {
                     r->type = CMD_REQ_REDIS_BITCOUNT;
                     break;
                 }
 
-                if (str8icmp(m, 'g', 'e', 't', 'r', 'a', 'n', 'g', 'e')) {
+                if (str8icmp(m, 'g', 'e', 't', 'r', 'a', 'n', 'g', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_GETRANGE;
                     break;
                 }
 
-                if (str8icmp(m, 's', 'e', 't', 'r', 'a', 'n', 'g', 'e')) {
+                if (str8icmp(m, 's', 'e', 't', 'r', 'a', 'n', 'g', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_SETRANGE;
                     break;
                 }
 
-                if (str8icmp(m, 's', 'm', 'e', 'm', 'b', 'e', 'r', 's')) {
+                if (str8icmp(m, 's', 'm', 'e', 'm', 'b', 'e', 'r', 's'))
+                {
                     r->type = CMD_REQ_REDIS_SMEMBERS;
                     break;
                 }
 
-                if (str8icmp(m, 'z', 'r', 'e', 'v', 'r', 'a', 'n', 'k')) {
+                if (str8icmp(m, 'z', 'r', 'e', 'v', 'r', 'a', 'n', 'k'))
+                {
                     r->type = CMD_REQ_REDIS_ZREVRANK;
                     break;
                 }
@@ -907,27 +1085,32 @@ redis_parse_cmd(struct cmd *r)
                 break;
 
             case 9:
-                if (str9icmp(m, 'p', 'e', 'x', 'p', 'i', 'r', 'e', 'a', 't')) {
+                if (str9icmp(m, 'p', 'e', 'x', 'p', 'i', 'r', 'e', 'a', 't'))
+                {
                     r->type = CMD_REQ_REDIS_PEXPIREAT;
                     break;
                 }
 
-                if (str9icmp(m, 'r', 'p', 'o', 'p', 'l', 'p', 'u', 's', 'h')) {
+                if (str9icmp(m, 'r', 'p', 'o', 'p', 'l', 'p', 'u', 's', 'h'))
+                {
                     r->type = CMD_REQ_REDIS_RPOPLPUSH;
                     break;
                 }
 
-                if (str9icmp(m, 's', 'i', 's', 'm', 'e', 'm', 'b', 'e', 'r')) {
+                if (str9icmp(m, 's', 'i', 's', 'm', 'e', 'm', 'b', 'e', 'r'))
+                {
                     r->type = CMD_REQ_REDIS_SISMEMBER;
                     break;
                 }
 
-                if (str9icmp(m, 'z', 'r', 'e', 'v', 'r', 'a', 'n', 'g', 'e')) {
+                if (str9icmp(m, 'z', 'r', 'e', 'v', 'r', 'a', 'n', 'g', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_ZREVRANGE;
                     break;
                 }
 
-                if (str9icmp(m, 'z', 'l', 'e', 'x', 'c', 'o', 'u', 'n', 't')) {
+                if (str9icmp(m, 'z', 'l', 'e', 'x', 'c', 'o', 'u', 'n', 't'))
+                {
                     r->type = CMD_REQ_REDIS_ZLEXCOUNT;
                     break;
                 }
@@ -935,43 +1118,51 @@ redis_parse_cmd(struct cmd *r)
                 break;
 
             case 10:
-                if (str10icmp(m, 's', 'd', 'i', 'f', 'f', 's', 't', 'o', 'r', 'e')) {
+                if (str10icmp(m, 's', 'd', 'i', 'f', 'f', 's', 't', 'o', 'r', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_SDIFFSTORE;
                     break;
                 }
 
             case 11:
-                if (str11icmp(m, 'i', 'n', 'c', 'r', 'b', 'y', 'f', 'l', 'o', 'a', 't')) {
+                if (str11icmp(m, 'i', 'n', 'c', 'r', 'b', 'y', 'f', 'l', 'o', 'a', 't'))
+                {
                     r->type = CMD_REQ_REDIS_INCRBYFLOAT;
                     break;
                 }
 
-                if (str11icmp(m, 's', 'i', 'n', 't', 'e', 'r', 's', 't', 'o', 'r', 'e')) {
+                if (str11icmp(m, 's', 'i', 'n', 't', 'e', 'r', 's', 't', 'o', 'r', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_SINTERSTORE;
                     break;
                 }
 
-                if (str11icmp(m, 's', 'r', 'a', 'n', 'd', 'm', 'e', 'm', 'b', 'e', 'r')) {
+                if (str11icmp(m, 's', 'r', 'a', 'n', 'd', 'm', 'e', 'm', 'b', 'e', 'r'))
+                {
                     r->type = CMD_REQ_REDIS_SRANDMEMBER;
                     break;
                 }
 
-                if (str11icmp(m, 's', 'u', 'n', 'i', 'o', 'n', 's', 't', 'o', 'r', 'e')) {
+                if (str11icmp(m, 's', 'u', 'n', 'i', 'o', 'n', 's', 't', 'o', 'r', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_SUNIONSTORE;
                     break;
                 }
 
-                if (str11icmp(m, 'z', 'i', 'n', 't', 'e', 'r', 's', 't', 'o', 'r', 'e')) {
+                if (str11icmp(m, 'z', 'i', 'n', 't', 'e', 'r', 's', 't', 'o', 'r', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_ZINTERSTORE;
                     break;
                 }
 
-                if (str11icmp(m, 'z', 'u', 'n', 'i', 'o', 'n', 's', 't', 'o', 'r', 'e')) {
+                if (str11icmp(m, 'z', 'u', 'n', 'i', 'o', 'n', 's', 't', 'o', 'r', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_ZUNIONSTORE;
                     break;
                 }
 
-                if (str11icmp(m, 'z', 'r', 'a', 'n', 'g', 'e', 'b', 'y', 'l', 'e', 'x')) {
+                if (str11icmp(m, 'z', 'r', 'a', 'n', 'g', 'e', 'b', 'y', 'l', 'e', 'x'))
+                {
                     r->type = CMD_REQ_REDIS_ZRANGEBYLEX;
                     break;
                 }
@@ -979,7 +1170,8 @@ redis_parse_cmd(struct cmd *r)
                 break;
 
             case 12:
-                if (str12icmp(m, 'h', 'i', 'n', 'c', 'r', 'b', 'y', 'f', 'l', 'o', 'a', 't')) {
+                if (str12icmp(m, 'h', 'i', 'n', 'c', 'r', 'b', 'y', 'f', 'l', 'o', 'a', 't'))
+                {
                     r->type = CMD_REQ_REDIS_HINCRBYFLOAT;
                     break;
                 }
@@ -988,7 +1180,8 @@ redis_parse_cmd(struct cmd *r)
                 break;
 
             case 13:
-                if (str13icmp(m, 'z', 'r', 'a', 'n', 'g', 'e', 'b', 'y', 's', 'c', 'o', 'r', 'e')) {
+                if (str13icmp(m, 'z', 'r', 'a', 'n', 'g', 'e', 'b', 'y', 's', 'c', 'o', 'r', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_ZRANGEBYSCORE;
                     break;
                 }
@@ -996,7 +1189,8 @@ redis_parse_cmd(struct cmd *r)
                 break;
 
             case 14:
-                if (str14icmp(m, 'z', 'r', 'e', 'm', 'r', 'a', 'n', 'g', 'e', 'b', 'y', 'l', 'e', 'x')) {
+                if (str14icmp(m, 'z', 'r', 'e', 'm', 'r', 'a', 'n', 'g', 'e', 'b', 'y', 'l', 'e', 'x'))
+                {
                     r->type = CMD_REQ_REDIS_ZREMRANGEBYLEX;
                     break;
                 }
@@ -1004,7 +1198,8 @@ redis_parse_cmd(struct cmd *r)
                 break;
 
             case 15:
-                if (str15icmp(m, 'z', 'r', 'e', 'm', 'r', 'a', 'n', 'g', 'e', 'b', 'y', 'r', 'a', 'n', 'k')) {
+                if (str15icmp(m, 'z', 'r', 'e', 'm', 'r', 'a', 'n', 'g', 'e', 'b', 'y', 'r', 'a', 'n', 'k'))
+                {
                     r->type = CMD_REQ_REDIS_ZREMRANGEBYRANK;
                     break;
                 }
@@ -1012,12 +1207,14 @@ redis_parse_cmd(struct cmd *r)
                 break;
 
             case 16:
-                if (str16icmp(m, 'z', 'r', 'e', 'm', 'r', 'a', 'n', 'g', 'e', 'b', 'y', 's', 'c', 'o', 'r', 'e')) {
+                if (str16icmp(m, 'z', 'r', 'e', 'm', 'r', 'a', 'n', 'g', 'e', 'b', 'y', 's', 'c', 'o', 'r', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_ZREMRANGEBYSCORE;
                     break;
                 }
 
-                if (str16icmp(m, 'z', 'r', 'e', 'v', 'r', 'a', 'n', 'g', 'e', 'b', 'y', 's', 'c', 'o', 'r', 'e')) {
+                if (str16icmp(m, 'z', 'r', 'e', 'v', 'r', 'a', 'n', 'g', 'e', 'b', 'y', 's', 'c', 'o', 'r', 'e'))
+                {
                     r->type = CMD_REQ_REDIS_ZREVRANGEBYSCORE;
                     break;
                 }
@@ -1028,7 +1225,8 @@ redis_parse_cmd(struct cmd *r)
                 break;
             }
 
-            if (r->type == CMD_UNKNOWN) {
+            if (r->type == CMD_UNKNOWN)
+            {
                 goto error;
             }
 
@@ -1036,13 +1234,23 @@ redis_parse_cmd(struct cmd *r)
             break;
 
         case SW_REQ_TYPE_LF:
-            switch (ch) {
+            switch (ch)
+            {
             case LF:
-                if (redis_argz(r)) {
+                if (redis_argz(r))
+                {
                     goto done;
-                } else if (redis_argeval(r)) {
+                }
+                else if (redis_argeval(r))
+                {
                     state = SW_ARG1_LEN;
-                } else {
+                }
+                else if (redis_argscript(r))
+                {
+                    state = SW_ARG1_LEN;
+                }
+                else
+                {
                     state = SW_KEY_LEN;
                 }
                 break;
@@ -1054,30 +1262,43 @@ redis_parse_cmd(struct cmd *r)
             break;
 
         case SW_KEY_LEN:
-            if (token == NULL) {
-                if (ch != '$') {
+            if (token == NULL)
+            {
+                scp_key_loc = p;
+                scp_key_len = r->clen - (p - r->cmd);
+
+                if (ch != '$')
+                {
                     goto error;
                 }
                 token = p;
                 rlen = 0;
-            } else if (isdigit(ch)) {
+            }
+            else if (isdigit(ch))
+            {
                 rlen = rlen * 10 + (uint32_t)(ch - '0');
-            } else if (ch == CR) {
-                
-                if (rnarg == 0) {
+            }
+            else if (ch == CR)
+            {
+
+                if (rnarg == 0)
+                {
                     goto error;
                 }
                 rnarg--;
                 token = NULL;
                 state = SW_KEY_LEN_LF;
-            } else {
+            }
+            else
+            {
                 goto error;
             }
 
             break;
 
         case SW_KEY_LEN_LF:
-            switch (ch) {
+            switch (ch)
+            {
             case LF:
                 state = SW_KEY;
                 break;
@@ -1089,21 +1310,26 @@ redis_parse_cmd(struct cmd *r)
             break;
 
         case SW_KEY:
-            if (token == NULL) {
+            if (token == NULL)
+            {
                 token = p;
             }
 
             m = token + rlen;
-            if (m >= cmd_end) {
+            if (m >= cmd_end)
+            {
                 //m = b->last - 1;
                 //p = m;
                 //break;
                 goto error;
             }
 
-            if (*m != CR) {
+            if (*m != CR)
+            {
                 goto error;
-            } else {        /* got a key */
+            }
+            else            /* got a key */
+            {
                 struct keypos *kpos;
 
                 p = m;      /* move forward by rlen bytes */
@@ -1112,7 +1338,8 @@ redis_parse_cmd(struct cmd *r)
                 token = NULL;
 
                 kpos = hiarray_push(r->keys);
-                if (kpos == NULL) {
+                if (kpos == NULL)
+                {
                     goto enomem;
                 }
                 kpos->start = m;
@@ -1125,52 +1352,109 @@ redis_parse_cmd(struct cmd *r)
             break;
 
         case SW_KEY_LF:
-            switch (ch) {
+            switch (ch)
+            {
             case LF:
-                if (redis_arg0(r)) {
-                    if (rnarg != 0) {
+                if (redis_arg0(r))
+                {
+                    if (rnarg != 0)
+                    {
                         goto error;
                     }
                     goto done;
-                } else if (redis_arg1(r)) {
-                    if (rnarg != 1) {
+                }
+                else if (redis_arg1(r))
+                {
+                    if (rnarg != 1)
+                    {
                         goto error;
                     }
                     state = SW_ARG1_LEN;
-                } else if (redis_arg2(r)) {
-                    if (rnarg != 2) {
+                }
+                else if (redis_arg2(r))
+                {
+                    if (rnarg != 2)
+                    {
                         goto error;
                     }
                     state = SW_ARG1_LEN;
-                } else if (redis_arg3(r)) {
-                    if (rnarg != 3) {
+                }
+                else if (redis_arg3(r))
+                {
+                    if (rnarg != 3)
+                    {
                         goto error;
                     }
                     state = SW_ARG1_LEN;
-                } else if (redis_argn(r)) {
-                    if (rnarg == 0) {
+                }
+                else if (redis_argn(r))
+                {
+                    if (rnarg == 0)
+                    {
                         goto done;
                     }
                     state = SW_ARG1_LEN;
-                } else if (redis_argx(r)) {
-                    if (rnarg == 0) {
+                }
+                else if (redis_argx(r))
+                {
+                    if (rnarg == 0)
+                    {
                         goto done;
                     }
                     state = SW_KEY_LEN;
-                } else if (redis_argkvx(r)) {
-                    if (rnarg == 0) {
+                }
+                else if (redis_argkvx(r))
+                {
+                    if (rnarg == 0)
+                    {
                         goto done;
                     }
-                    if (r->narg % 2 == 0) {
+                    if (r->narg % 2 == 0)
+                    {
                         goto error;
                     }
                     state = SW_ARG1_LEN;
-                } else if (redis_argeval(r)) {
-                    if (rnarg == 0) {
+                }
+                else if (redis_argeval(r))
+                {
+                    if (rnarg == 0)
+                    {
                         goto done;
                     }
                     state = SW_ARGN_LEN;
-                } else {
+                }
+                else if (redis_argscript(r))
+                {
+                    if (rnarg == 0)
+                    {
+                        goto done;
+                    }
+                    goto error;
+                }
+                else if (redis_argscpz(r))
+                {
+                    if (rnarg == 0)
+                    {
+                        r->cmd[1] = '2';
+                        //memset(scp_key_loc, 0, scp_key_len);
+                        r->clen -= scp_key_len;
+                        goto done;
+                    }
+                    goto error;
+                }
+                else if (redis_argscp1(r))
+                {
+                    if (rnarg == 0)
+                    {
+                        r->cmd[1] = '3';
+                        //memset(scp_key_loc, 0, scp_key_len);
+                        r->clen -= scp_key_len;
+                        goto done;
+                    }
+                    goto error;
+                }
+                else
+                {
                     goto error;
                 }
 
@@ -1183,16 +1467,23 @@ redis_parse_cmd(struct cmd *r)
             break;
 
         case SW_ARG1_LEN:
-            if (token == NULL) {
-                if (ch != '$') {
+            if (token == NULL)
+            {
+                if (ch != '$')
+                {
                     goto error;
                 }
                 rlen = 0;
                 token = p;
-            } else if (isdigit(ch)) {
+            }
+            else if (isdigit(ch))
+            {
                 rlen = rlen * 10 + (uint32_t)(ch - '0');
-            } else if (ch == CR) {
-                if ((p - token) <= 1 || rnarg == 0) {
+            }
+            else if (ch == CR)
+            {
+                if ((p - token) <= 1 || rnarg == 0)
+                {
                     goto error;
                 }
                 rnarg--;
@@ -1208,7 +1499,7 @@ redis_parse_cmd(struct cmd *r)
                     {
                         goto error;
                     }
-                    
+
                     kpos = array_n(r->keys, array_len-1);
                     if (kpos == NULL || kpos->v_len != 0) {
                         goto error;
@@ -1218,14 +1509,17 @@ redis_parse_cmd(struct cmd *r)
                 }
                 */
                 state = SW_ARG1_LEN_LF;
-            } else {
+            }
+            else
+            {
                 goto error;
             }
 
             break;
 
         case SW_ARG1_LEN_LF:
-            switch (ch) {
+            switch (ch)
+            {
             case LF:
                 state = SW_ARG1;
                 break;
@@ -1238,7 +1532,8 @@ redis_parse_cmd(struct cmd *r)
 
         case SW_ARG1:
             m = p + rlen;
-            if (m >= cmd_end) {
+            if (m >= cmd_end)
+            {
                 //rlen -= (uint32_t)(b->last - p);
                 //m = b->last - 1;
                 //p = m;
@@ -1246,10 +1541,20 @@ redis_parse_cmd(struct cmd *r)
                 goto error;
             }
 
-            if (*m != CR) {
+            if (*m != CR)
+            {
                 goto error;
             }
 
+            //if script, judge action
+            if(!strncmp(p, "LOAD", 4))
+            {
+                r->type = CMD_REQ_REDIS_SCRIPTLOAD;
+            }
+            else if(!strncmp(p, "FLUSH", 5))
+            {
+                r->type = CMD_REQ_REDIS_SCRIPTFLUSH;
+            }
             p = m; /* move forward by rlen bytes */
             rlen = 0;
 
@@ -1258,39 +1563,75 @@ redis_parse_cmd(struct cmd *r)
             break;
 
         case SW_ARG1_LF:
-            switch (ch) {
+            switch (ch)
+            {
             case LF:
-                if (redis_arg1(r)) {
-                    if (rnarg != 0) {
+                if (redis_arg1(r))
+                {
+                    if (rnarg != 0)
+                    {
                         goto error;
                     }
                     goto done;
-                } else if (redis_arg2(r)) {
-                    if (rnarg != 1) {
+                }
+                else if (redis_arg2(r))
+                {
+                    if (rnarg != 1)
+                    {
                         goto error;
                     }
                     state = SW_ARG2_LEN;
-                } else if (redis_arg3(r)) {
-                    if (rnarg != 2) {
+                }
+                else if (redis_arg3(r))
+                {
+                    if (rnarg != 2)
+                    {
                         goto error;
                     }
                     state = SW_ARG2_LEN;
-                } else if (redis_argn(r)) {
-                    if (rnarg == 0) {
+                }
+                else if (redis_argn(r))
+                {
+                    if (rnarg == 0)
+                    {
                         goto done;
                     }
                     state = SW_ARGN_LEN;
-                } else if (redis_argeval(r)) {
-                    if (rnarg < 2) {
+                }
+                else if (redis_argeval(r))
+                {
+                    if (rnarg < 2)
+                    {
                         goto error;
                     }
                     state = SW_ARG2_LEN;
-                } else if (redis_argkvx(r)) {
-                    if (rnarg == 0) {
+                }
+                else if (redis_argscpz(r))
+                {
+                    if (rnarg < 1)
+                    {
+                        goto error;
+                    }
+                    state = SW_KEY_LEN;
+                }
+                else if (redis_argscp1(r))
+                {
+                    if (rnarg < 2)
+                    {
+                        goto error;
+                    }
+                    state = SW_ARG2_LEN;
+                }
+                else if (redis_argkvx(r))
+                {
+                    if (rnarg == 0)
+                    {
                         goto done;
                     }
                     state = SW_KEY_LEN;
-                } else {
+                }
+                else
+                {
                     goto error;
                 }
 
@@ -1303,29 +1644,39 @@ redis_parse_cmd(struct cmd *r)
             break;
 
         case SW_ARG2_LEN:
-            if (token == NULL) {
-                if (ch != '$') {
+            if (token == NULL)
+            {
+                if (ch != '$')
+                {
                     goto error;
                 }
                 rlen = 0;
                 token = p;
-            } else if (isdigit(ch)) {
+            }
+            else if (isdigit(ch))
+            {
                 rlen = rlen * 10 + (uint32_t)(ch - '0');
-            } else if (ch == CR) {
-                if ((p - token) <= 1 || rnarg == 0) {
+            }
+            else if (ch == CR)
+            {
+                if ((p - token) <= 1 || rnarg == 0)
+                {
                     goto error;
                 }
                 rnarg--;
                 token = NULL;
                 state = SW_ARG2_LEN_LF;
-            } else {
+            }
+            else
+            {
                 goto error;
             }
 
             break;
 
         case SW_ARG2_LEN_LF:
-            switch (ch) {
+            switch (ch)
+            {
             case LF:
                 state = SW_ARG2;
                 break;
@@ -1337,7 +1688,8 @@ redis_parse_cmd(struct cmd *r)
             break;
 
         case SW_ARG2:
-            if (token == NULL && redis_argeval(r)) {
+            if (token == NULL && redis_argeval(r))
+            {
                 /*
                  * For EVAL/EVALSHA, ARG2 represents the # key/arg pairs which must
                  * be tokenized and stored in contiguous memory.
@@ -1346,7 +1698,8 @@ redis_parse_cmd(struct cmd *r)
             }
 
             m = p + rlen;
-            if (m >= cmd_end) {
+            if (m >= cmd_end)
+            {
                 //rlen -= (uint32_t)(b->last - p);
                 //m = b->last - 1;
                 //p = m;
@@ -1354,14 +1707,16 @@ redis_parse_cmd(struct cmd *r)
                 goto error;
             }
 
-            if (*m != CR) {
+            if (*m != CR)
+            {
                 goto error;
             }
 
             p = m; /* move forward by rlen bytes */
             rlen = 0;
 
-            if (redis_argeval(r)) {
+            if (redis_argeval(r))
+            {
                 uint32_t nkey;
                 char *chp;
 
@@ -1372,18 +1727,24 @@ redis_parse_cmd(struct cmd *r)
                  * both p and m point to the end of the argument and r->token
                  * points to the start.
                  */
-                if (p - token < 1) {
+                if (p - token < 1)
+                {
                     goto error;
                 }
 
-                for (nkey = 0, chp = token; chp < p; chp++) {
-                    if (isdigit(*chp)) {
+                for (nkey = 0, chp = token; chp < p; chp++)
+                {
+                    if (isdigit(*chp))
+                    {
                         nkey = nkey * 10 + (uint32_t)(*chp - '0');
-                    } else {
+                    }
+                    else
+                    {
                         goto error;
                     }
                 }
-                if (nkey == 0) {
+                if (nkey == 0)
+                {
                     goto error;
                 }
 
@@ -1395,29 +1756,51 @@ redis_parse_cmd(struct cmd *r)
             break;
 
         case SW_ARG2_LF:
-            switch (ch) {
+            switch (ch)
+            {
             case LF:
-                if (redis_arg2(r)) {
-                    if (rnarg != 0) {
+                if (redis_arg2(r))
+                {
+                    if (rnarg != 0)
+                    {
                         goto error;
                     }
                     goto done;
-                } else if (redis_arg3(r)) {
-                    if (rnarg != 1) {
+                }
+                else if (redis_arg3(r))
+                {
+                    if (rnarg != 1)
+                    {
                         goto error;
                     }
                     state = SW_ARG3_LEN;
-                } else if (redis_argn(r)) {
-                    if (rnarg == 0) {
+                }
+                else if (redis_argn(r))
+                {
+                    if (rnarg == 0)
+                    {
                         goto done;
                     }
                     state = SW_ARGN_LEN;
-                } else if (redis_argeval(r)) {
-                    if (rnarg < 1) {
+                }
+                else if (redis_argeval(r))
+                {
+                    if (rnarg < 1)
+                    {
                         goto error;
                     }
                     state = SW_KEY_LEN;
-                } else {
+                }
+                else if (redis_argscp1(r))
+                {
+                    if (rnarg < 1)
+                    {
+                        goto error;
+                    }
+                    state = SW_KEY_LEN;
+                }
+                else
+                {
                     goto error;
                 }
 
@@ -1430,29 +1813,39 @@ redis_parse_cmd(struct cmd *r)
             break;
 
         case SW_ARG3_LEN:
-            if (token == NULL) {
-                if (ch != '$') {
+            if (token == NULL)
+            {
+                if (ch != '$')
+                {
                     goto error;
                 }
                 rlen = 0;
                 token = p;
-            } else if (isdigit(ch)) {
+            }
+            else if (isdigit(ch))
+            {
                 rlen = rlen * 10 + (uint32_t)(ch - '0');
-            } else if (ch == CR) {
-                if ((p - token) <= 1 || rnarg == 0) {
+            }
+            else if (ch == CR)
+            {
+                if ((p - token) <= 1 || rnarg == 0)
+                {
                     goto error;
                 }
                 rnarg--;
                 token = NULL;
                 state = SW_ARG3_LEN_LF;
-            } else {
+            }
+            else
+            {
                 goto error;
             }
 
             break;
 
         case SW_ARG3_LEN_LF:
-            switch (ch) {
+            switch (ch)
+            {
             case LF:
                 state = SW_ARG3;
                 break;
@@ -1465,7 +1858,8 @@ redis_parse_cmd(struct cmd *r)
 
         case SW_ARG3:
             m = p + rlen;
-            if (m >= cmd_end) {
+            if (m >= cmd_end)
+            {
                 //rlen -= (uint32_t)(b->last - p);
                 //m = b->last - 1;
                 //p = m;
@@ -1473,7 +1867,8 @@ redis_parse_cmd(struct cmd *r)
                 goto error;
             }
 
-            if (*m != CR) {
+            if (*m != CR)
+            {
                 goto error;
             }
 
@@ -1484,19 +1879,27 @@ redis_parse_cmd(struct cmd *r)
             break;
 
         case SW_ARG3_LF:
-            switch (ch) {
+            switch (ch)
+            {
             case LF:
-                if (redis_arg3(r)) {
-                    if (rnarg != 0) {
+                if (redis_arg3(r))
+                {
+                    if (rnarg != 0)
+                    {
                         goto error;
                     }
                     goto done;
-                } else if (redis_argn(r)) {
-                    if (rnarg == 0) {
+                }
+                else if (redis_argn(r))
+                {
+                    if (rnarg == 0)
+                    {
                         goto done;
                     }
                     state = SW_ARGN_LEN;
-                } else {
+                }
+                else
+                {
                     goto error;
                 }
 
@@ -1509,29 +1912,39 @@ redis_parse_cmd(struct cmd *r)
             break;
 
         case SW_ARGN_LEN:
-            if (token == NULL) {
-                if (ch != '$') {
+            if (token == NULL)
+            {
+                if (ch != '$')
+                {
                     goto error;
                 }
                 rlen = 0;
                 token = p;
-            } else if (isdigit(ch)) {
+            }
+            else if (isdigit(ch))
+            {
                 rlen = rlen * 10 + (uint32_t)(ch - '0');
-            } else if (ch == CR) {
-                if ((p - token) <= 1 || rnarg == 0) {
+            }
+            else if (ch == CR)
+            {
+                if ((p - token) <= 1 || rnarg == 0)
+                {
                     goto error;
                 }
                 rnarg--;
                 token = NULL;
                 state = SW_ARGN_LEN_LF;
-            } else {
+            }
+            else
+            {
                 goto error;
             }
 
             break;
 
         case SW_ARGN_LEN_LF:
-            switch (ch) {
+            switch (ch)
+            {
             case LF:
                 state = SW_ARGN;
                 break;
@@ -1544,7 +1957,8 @@ redis_parse_cmd(struct cmd *r)
 
         case SW_ARGN:
             m = p + rlen;
-            if (m >= cmd_end) {
+            if (m >= cmd_end)
+            {
                 //rlen -= (uint32_t)(b->last - p);
                 //m = b->last - 1;
                 //p = m;
@@ -1552,7 +1966,8 @@ redis_parse_cmd(struct cmd *r)
                 goto error;
             }
 
-            if (*m != CR) {
+            if (*m != CR)
+            {
                 goto error;
             }
 
@@ -1563,14 +1978,19 @@ redis_parse_cmd(struct cmd *r)
             break;
 
         case SW_ARGN_LF:
-            switch (ch) {
+            switch (ch)
+            {
             case LF:
-                if (redis_argn(r) || redis_argeval(r)) {
-                    if (rnarg == 0) {
+                if (redis_argn(r) || redis_argeval(r))
+                {
+                    if (rnarg == 0)
+                    {
                         goto done;
                     }
                     state = SW_ARGN_LEN;
-                } else {
+                }
+                else
+                {
                     goto error;
                 }
 
@@ -1596,27 +2016,28 @@ redis_parse_cmd(struct cmd *r)
 done:
 
     ASSERT(r->type > CMD_UNKNOWN && r->type < CMD_SENTINEL);
-    
+
     r->result = CMD_PARSE_OK;
 
     return;
 
 enomem:
-    
+
     r->result = CMD_PARSE_ENOMEM;
 
     return;
 
 error:
-    
+
     r->result = CMD_PARSE_ERROR;
     errno = EINVAL;
-    if(r->errstr == NULL){
+    if(r->errstr == NULL)
+    {
         r->errstr = hi_alloc(100*sizeof(*r->errstr));
     }
 
-    len = _scnprintf(r->errstr, 100, "Parse command error. Cmd type: %d, state: %d, break position: %d.", 
-        r->type, state, (int)(p - r->cmd));
+    len = _scnprintf(r->errstr, 100, "Parse command error. Cmd type: %d, state: %d, break position: %d.",
+                     r->type, state, (int)(p - r->cmd));
     r->errstr[len] = '\0';
 }
 
@@ -1628,7 +2049,7 @@ struct cmd *command_get()
     {
         return NULL;
     }
-        
+
     command->id = ++cmd_id;
     command->result = CMD_PARSE_OK;
     command->errstr = NULL;
@@ -1647,7 +2068,7 @@ struct cmd *command_get()
     command->sub_commands = NULL;
 
     command->keys = hiarray_create(1, sizeof(struct keypos));
-    if (command->keys == NULL) 
+    if (command->keys == NULL)
     {
         hi_free(command);
         return NULL;
@@ -1668,7 +2089,8 @@ void command_destroy(struct cmd *command)
         free(command->cmd);
     }
 
-    if(command->errstr != NULL){
+    if(command->errstr != NULL)
+    {
         hi_free(command->errstr);
     }
 
@@ -1693,7 +2115,7 @@ void command_destroy(struct cmd *command)
     {
         listRelease(command->sub_commands);
     }
-    
+
     hi_free(command);
 }
 

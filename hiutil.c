@@ -25,7 +25,8 @@ hi_set_blocking(int sd)
     int flags;
 
     flags = fcntl(sd, F_GETFL, 0);
-    if (flags < 0) {
+    if (flags < 0)
+    {
         return flags;
     }
 
@@ -38,7 +39,8 @@ hi_set_nonblocking(int sd)
     int flags;
 
     flags = fcntl(sd, F_GETFL, 0);
-    if (flags < 0) {
+    if (flags < 0)
+    {
         return flags;
     }
 
@@ -121,7 +123,8 @@ hi_get_soerror(int sd)
     len = sizeof(err);
 
     status = getsockopt(sd, SOL_SOCKET, SO_ERROR, &err, &len);
-    if (status == 0) {
+    if (status == 0)
+    {
         errno = err;
     }
 
@@ -138,7 +141,8 @@ hi_get_sndbuf(int sd)
     len = sizeof(size);
 
     status = getsockopt(sd, SOL_SOCKET, SO_SNDBUF, &size, &len);
-    if (status < 0) {
+    if (status < 0)
+    {
         return status;
     }
 
@@ -155,7 +159,8 @@ hi_get_rcvbuf(int sd)
     len = sizeof(size);
 
     status = getsockopt(sd, SOL_SOCKET, SO_RCVBUF, &size, &len);
-    if (status < 0) {
+    if (status < 0)
+    {
         return status;
     }
 
@@ -167,26 +172,30 @@ _hi_atoi(uint8_t *line, size_t n)
 {
     int value;
 
-    if (n == 0) {
+    if (n == 0)
+    {
         return -1;
     }
 
-    for (value = 0; n--; line++) {
-        if (*line < '0' || *line > '9') {
+    for (value = 0; n--; line++)
+    {
+        if (*line < '0' || *line > '9')
+        {
             return -1;
         }
 
         value = value * 10 + (*line - '0');
     }
 
-    if (value < 0) {
+    if (value < 0)
+    {
         return -1;
     }
 
     return value;
 }
 
-void 
+void
 _hi_itoa(uint8_t *s, int num)
 {
     uint8_t c;
@@ -226,7 +235,7 @@ _hi_itoa(uint8_t *s, int num)
     }
 
     s[len] = '\0';
-    
+
     for(i = 0; i < len/2; i ++)
     {
         c = s[i];
@@ -240,7 +249,8 @@ _hi_itoa(uint8_t *s, int num)
 int
 hi_valid_port(int n)
 {
-    if (n < 1 || n > UINT16_MAX) {
+    if (n < 1 || n > UINT16_MAX)
+    {
         return 0;
     }
 
@@ -288,7 +298,8 @@ _hi_zalloc(size_t size, const char *name, int line)
     void *p;
 
     p = _hi_alloc(size, name, line);
-    if (p != NULL) {
+    if (p != NULL)
+    {
         memset(p, 0, size);
     }
 
@@ -314,7 +325,7 @@ _hi_realloc(void *ptr, size_t size, const char *name, int line)
     {
 
     }
-    
+
     return p;
 }
 
@@ -346,13 +357,15 @@ hi_stacktrace(int skip_count)
 
     size = backtrace(stack, 64);
     symbols = backtrace_symbols(stack, size);
-    if (symbols == NULL) {
+    if (symbols == NULL)
+    {
         return;
     }
 
     skip_count++; /* skip the current frame also */
 
-    for (i = skip_count, j = 0; i < size; i++, j++) {
+    for (i = skip_count, j = 0; i < size; i++, j++)
+    {
         printf("[%d] %s\n", j, symbols[i]);
     }
 
@@ -365,7 +378,7 @@ hi_stacktrace_fd(int fd)
 {
     if(fd > 0)
     {
-        
+
     }
 #ifdef HI_HAVE_BACKTRACE
     void *stack[64];
@@ -379,10 +392,11 @@ hi_stacktrace_fd(int fd)
 void
 hi_assert(const char *cond, const char *file, int line, int panic)
 {
-    
+
     printf("File: %s Line: %d: %s\n", file, line, cond);
-    
-    if (panic) {
+
+    if (panic)
+    {
         hi_stacktrace(1);
         abort();
     }
@@ -406,11 +420,13 @@ _vscnprintf(char *buf, size_t size, const char *fmt, va_list args)
      *
      * See: http://lwn.net/Articles/69419/
      */
-    if (n <= 0) {
+    if (n <= 0)
+    {
         return 0;
     }
 
-    if (n < (int) size) {
+    if (n < (int) size)
+    {
         return n;
     }
 
@@ -442,15 +458,19 @@ _hi_sendn(int sd, const void *vptr, size_t n)
 
     ptr = vptr;
     nleft = n;
-    while (nleft > 0) {
+    while (nleft > 0)
+    {
         nsend = send(sd, ptr, nleft, 0);
-        if (nsend < 0) {
-            if (errno == EINTR) {
+        if (nsend < 0)
+        {
+            if (errno == EINTR)
+            {
                 continue;
             }
             return nsend;
         }
-        if (nsend == 0) {
+        if (nsend == 0)
+        {
             return -1;
         }
 
@@ -473,15 +493,19 @@ _hi_recvn(int sd, void *vptr, size_t n)
 
     ptr = vptr;
     nleft = n;
-    while (nleft > 0) {
+    while (nleft > 0)
+    {
         nrecv = recv(sd, ptr, nleft, 0);
-        if (nrecv < 0) {
-            if (errno == EINTR) {
+        if (nrecv < 0)
+        {
+            if (errno == EINTR)
+            {
                 continue;
             }
             return nrecv;
         }
-        if (nrecv == 0) {
+        if (nrecv == 0)
+        {
             break;
         }
 
@@ -503,7 +527,8 @@ hi_usec_now(void)
     int status;
 
     status = gettimeofday(&now, NULL);
-    if (status < 0) {
+    if (status < 0)
+    {
         return -1;
     }
 

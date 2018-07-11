@@ -62,7 +62,8 @@ void listRelease(hilist *list)
 
     current = list->head;
     len = list->len;
-    while(len--) {
+    while(len--)
+    {
         next = current->next;
         if (list->free) list->free(current->value);
         hi_free(current);
@@ -84,10 +85,13 @@ hilist *listAddNodeHead(hilist *list, void *value)
     if ((node = hi_alloc(sizeof(*node))) == NULL)
         return NULL;
     node->value = value;
-    if (list->len == 0) {
+    if (list->len == 0)
+    {
         list->head = list->tail = node;
         node->prev = node->next = NULL;
-    } else {
+    }
+    else
+    {
         node->prev = NULL;
         node->next = list->head;
         list->head->prev = node;
@@ -110,10 +114,13 @@ hilist *listAddNodeTail(hilist *list, void *value)
     if ((node = hi_alloc(sizeof(*node))) == NULL)
         return NULL;
     node->value = value;
-    if (list->len == 0) {
+    if (list->len == 0)
+    {
         list->head = list->tail = node;
         node->prev = node->next = NULL;
-    } else {
+    }
+    else
+    {
         node->prev = list->tail;
         node->next = NULL;
         list->tail->next = node;
@@ -123,29 +130,37 @@ hilist *listAddNodeTail(hilist *list, void *value)
     return list;
 }
 
-hilist *listInsertNode(hilist *list, listNode *old_node, void *value, int after) {
+hilist *listInsertNode(hilist *list, listNode *old_node, void *value, int after)
+{
     listNode *node;
 
     if ((node = hi_alloc(sizeof(*node))) == NULL)
         return NULL;
     node->value = value;
-    if (after) {
+    if (after)
+    {
         node->prev = old_node;
         node->next = old_node->next;
-        if (list->tail == old_node) {
+        if (list->tail == old_node)
+        {
             list->tail = node;
         }
-    } else {
+    }
+    else
+    {
         node->next = old_node;
         node->prev = old_node->prev;
-        if (list->head == old_node) {
+        if (list->head == old_node)
+        {
             list->head = node;
         }
     }
-    if (node->prev != NULL) {
+    if (node->prev != NULL)
+    {
         node->prev->next = node;
     }
-    if (node->next != NULL) {
+    if (node->next != NULL)
+    {
         node->next->prev = node;
     }
     list->len++;
@@ -189,17 +204,20 @@ listIter *listGetIterator(hilist *list, int direction)
 }
 
 /* Release the iterator memory */
-void listReleaseIterator(listIter *iter) {
+void listReleaseIterator(listIter *iter)
+{
     hi_free(iter);
 }
 
 /* Create an iterator in the list private iterator structure */
-void listRewind(hilist *list, listIter *li) {
+void listRewind(hilist *list, listIter *li)
+{
     li->next = list->head;
     li->direction = AL_START_HEAD;
 }
 
-void listRewindTail(hilist *list, listIter *li) {
+void listRewindTail(hilist *list, listIter *li)
+{
     li->next = list->tail;
     li->direction = AL_START_TAIL;
 }
@@ -222,7 +240,8 @@ listNode *listNext(listIter *iter)
 {
     listNode *current = iter->next;
 
-    if (current != NULL) {
+    if (current != NULL)
+    {
         if (iter->direction == AL_START_HEAD)
             iter->next = current->next;
         else
@@ -251,19 +270,24 @@ hilist *listDup(hilist *orig)
     copy->free = orig->free;
     copy->match = orig->match;
     iter = listGetIterator(orig, AL_START_HEAD);
-    while((node = listNext(iter)) != NULL) {
+    while((node = listNext(iter)) != NULL)
+    {
         void *value;
 
-        if (copy->dup) {
+        if (copy->dup)
+        {
             value = copy->dup(node->value);
-            if (value == NULL) {
+            if (value == NULL)
+            {
                 listRelease(copy);
                 listReleaseIterator(iter);
                 return NULL;
             }
-        } else
+        }
+        else
             value = node->value;
-        if (listAddNodeTail(copy, value) == NULL) {
+        if (listAddNodeTail(copy, value) == NULL)
+        {
             listRelease(copy);
             listReleaseIterator(iter);
             return NULL;
@@ -288,14 +312,20 @@ listNode *listSearchKey(hilist *list, void *key)
     listNode *node;
 
     iter = listGetIterator(list, AL_START_HEAD);
-    while((node = listNext(iter)) != NULL) {
-        if (list->match) {
-            if (list->match(node->value, key)) {
+    while((node = listNext(iter)) != NULL)
+    {
+        if (list->match)
+        {
+            if (list->match(node->value, key))
+            {
                 listReleaseIterator(iter);
                 return node;
             }
-        } else {
-            if (key == node->value) {
+        }
+        else
+        {
+            if (key == node->value)
+            {
                 listReleaseIterator(iter);
                 return node;
             }
@@ -310,14 +340,18 @@ listNode *listSearchKey(hilist *list, void *key)
  * and so on. Negative integers are used in order to count
  * from the tail, -1 is the last element, -2 the penultimate
  * and so on. If the index is out of range NULL is returned. */
-listNode *listIndex(hilist *list, long index) {
+listNode *listIndex(hilist *list, long index)
+{
     listNode *n;
 
-    if (index < 0) {
+    if (index < 0)
+    {
         index = (-index)-1;
         n = list->tail;
         while(index-- && n) n = n->prev;
-    } else {
+    }
+    else
+    {
         n = list->head;
         while(index-- && n) n = n->next;
     }
@@ -325,7 +359,8 @@ listNode *listIndex(hilist *list, long index) {
 }
 
 /* Rotate the list removing the tail node and inserting it to the head. */
-void listRotate(hilist *list) {
+void listRotate(hilist *list)
+{
     listNode *tail = list->tail;
 
     if (listLength(list) <= 1) return;

@@ -6,7 +6,8 @@
 typedef int (*hiarray_compare_t)(const void *, const void *);
 typedef int (*hiarray_each_t)(void *, void *);
 
-struct hiarray {
+struct hiarray
+{
     uint32_t nelem;  /* # element */
     void     *elem;  /* element */
     size_t   size;   /* element size */

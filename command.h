@@ -6,7 +6,8 @@
 #include "hiredis.h"
 #include "adlist.h"
 
-typedef enum cmd_parse_result {
+typedef enum cmd_parse_result
+{
     CMD_PARSE_OK,                         /* parsing ok */
     CMD_PARSE_ENOMEM,                     /* out of memory */
     CMD_PARSE_ERROR,                      /* parsing error */
@@ -117,6 +118,9 @@ typedef enum cmd_parse_result {
     ACTION( REQ_REDIS_ZSCAN)                                                                        \
     ACTION( REQ_REDIS_EVAL )                   /* redis requests - eval */                              \
     ACTION( REQ_REDIS_EVALSHA )                                                                     \
+    ACTION( REQ_REDIS_SCRIPT )                                                                  \
+    ACTION( REQ_REDIS_SCRIPTLOAD )                                                                  \
+    ACTION( REQ_REDIS_SCRIPTFLUSH )                                                                  \
     ACTION( REQ_REDIS_PING )                   /* redis requests - ping/quit */                         \
     ACTION( REQ_REDIS_QUIT)                                                                         \
     ACTION( REQ_REDIS_AUTH)                                                                         \
@@ -129,22 +133,25 @@ typedef enum cmd_parse_result {
 
 
 #define DEFINE_ACTION(_name) CMD_##_name,
-typedef enum cmd_type {
+typedef enum cmd_type
+{
     CMD_TYPE_CODEC(DEFINE_ACTION)
 } cmd_type_t;
 #undef DEFINE_ACTION
 
 
-struct keypos {
+struct keypos
+{
     char             *start;        /* key start pos */
     char             *end;          /* key end pos */
     uint32_t         remain_len;    /* remain length after keypos->end for more key-value pairs in command, like mset */
 };
 
-struct cmd {
+struct cmd
+{
 
     uint64_t             id;              /* command id */
-    
+
     cmd_parse_result_t   result;          /* command parsing result */
     char                 *errstr;         /* error info when the command parse failed */
 
@@ -152,7 +159,7 @@ struct cmd {
 
     char                 *cmd;
     uint32_t             clen;            /* command length */
-    
+
     struct hiarray       *keys;           /* array of keypos, for req */
 
     char                 *narg_start;     /* narg start (redis) */
@@ -162,7 +169,7 @@ struct cmd {
     unsigned             quit:1;          /* quit request? */
     unsigned             noforward:1;     /* not need forward (example: ping) */
 
-    int                  slot_num;        /* this command should send to witch slot? 
+    int                  slot_num;        /* this command should send to witch slot?
                                                                           * -1:the keys in this command cross different slots*/
     struct cmd           **frag_seq;      /* sequence of fragment command, map from keys to fragments*/
 

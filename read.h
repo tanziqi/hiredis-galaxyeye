@@ -77,7 +77,8 @@
 extern "C" {
 #endif
 
-typedef struct redisReadTask {
+typedef struct redisReadTask
+{
     int type;
     int elements; /* number of elements in multibulk container */
     int idx; /* index in parent (array) object */
@@ -86,7 +87,8 @@ typedef struct redisReadTask {
     void *privdata; /* user-settable arbitrary field */
 } redisReadTask;
 
-typedef struct redisReplyObjectFunctions {
+typedef struct redisReplyObjectFunctions
+{
     void *(*createString)(const redisReadTask*, char*, size_t);
     void *(*createArray)(const redisReadTask*, int);
     void *(*createInteger)(const redisReadTask*, long long);
@@ -94,7 +96,8 @@ typedef struct redisReplyObjectFunctions {
     void (*freeObject)(void*);
 } redisReplyObjectFunctions;
 
-typedef struct redisReader {
+typedef struct redisReader
+{
     int err; /* Error flags, 0 when there is no error */
     char errstr[128]; /* String representation of error when applicable */
 

@@ -11,12 +11,14 @@ hiarray_create(uint32_t n, size_t size)
     ASSERT(n != 0 && size != 0);
 
     a = hi_alloc(sizeof(*a));
-    if (a == NULL) {
+    if (a == NULL)
+    {
         return NULL;
     }
 
     a->elem = hi_alloc(n * size);
-    if (a->elem == NULL) {
+    if (a->elem == NULL)
+    {
         hi_free(a);
         return NULL;
     }
@@ -41,7 +43,8 @@ hiarray_init(struct hiarray *a, uint32_t n, size_t size)
     ASSERT(n != 0 && size != 0);
 
     a->elem = hi_alloc(n * size);
-    if (a->elem == NULL) {
+    if (a->elem == NULL)
+    {
         return HI_ENOMEM;
     }
 
@@ -57,7 +60,8 @@ hiarray_deinit(struct hiarray *a)
 {
     ASSERT(a->nelem == 0);
 
-    if (a->elem != NULL) {
+    if (a->elem != NULL)
+    {
         hi_free(a->elem);
     }
 }
@@ -87,12 +91,14 @@ hiarray_push(struct hiarray *a)
     void *elem, *new;
     size_t size;
 
-    if (a->nelem == a->nalloc) {
+    if (a->nelem == a->nalloc)
+    {
 
         /* the array is full; allocate new array */
         size = a->size * a->nalloc;
         new = hi_realloc(a->elem, 2 * size);
-        if (new == NULL) {
+        if (new == NULL)
+        {
             return NULL;
         }
 
@@ -174,12 +180,14 @@ hiarray_each(struct hiarray *a, hiarray_each_t func, void *data)
     ASSERT(array_n(a) != 0);
     ASSERT(func != NULL);
 
-    for (i = 0, nelem = hiarray_n(a); i < nelem; i++) {
+    for (i = 0, nelem = hiarray_n(a); i < nelem; i++)
+    {
         void *elem = hiarray_get(a, i);
         rstatus_t status;
 
         status = func(elem, data);
-        if (status != HI_OK) {
+        if (status != HI_OK)
+        {
             return status;
         }
     }

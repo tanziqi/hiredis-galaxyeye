@@ -108,7 +108,8 @@ extern "C" {
 #endif
 
 /* This is the reply object returned by redisCommand() */
-typedef struct redisReply {
+typedef struct redisReply
+{
     int type; /* REDIS_REPLY_* */
     long long integer; /* The integer when type is REDIS_REPLY_INTEGER */
     int len; /* Length of string */
@@ -130,13 +131,15 @@ int redisFormatSdsCommandArgv(sds *target, int argc, const char ** argv, const s
 void redisFreeCommand(char *cmd);
 void redisFreeSdsCommand(sds cmd);
 
-enum redisConnectionType {
+enum redisConnectionType
+{
     REDIS_CONN_TCP,
     REDIS_CONN_UNIX,
 };
 
 /* Context for a connection to Redis */
-typedef struct redisContext {
+typedef struct redisContext
+{
     int err; /* Error flags, 0 when there is no error */
     char errstr[128]; /* String representation of error when applicable */
     int fd;
@@ -147,13 +150,15 @@ typedef struct redisContext {
     enum redisConnectionType connection_type;
     struct timeval *timeout;
 
-    struct {
+    struct
+    {
         char *host;
         char *source_addr;
         int port;
     } tcp;
 
-    struct {
+    struct
+    {
         char *path;
     } unix_sock;
 } redisContext;
@@ -164,7 +169,7 @@ redisContext *redisConnectNonBlock(const char *ip, int port);
 redisContext *redisConnectBindNonBlock(const char *ip, int port,
                                        const char *source_addr);
 redisContext *redisConnectBindNonBlockWithReuse(const char *ip, int port,
-                                                const char *source_addr);
+        const char *source_addr);
 redisContext *redisConnectUnix(const char *path);
 redisContext *redisConnectUnixWithTimeout(const char *path, const struct timeval tv);
 redisContext *redisConnectUnixNonBlock(const char *path);

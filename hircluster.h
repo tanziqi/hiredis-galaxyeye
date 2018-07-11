@@ -17,21 +17,33 @@
 
 
 #define HIRCLUSTER_FLAG_NULL                0x0
-/* The flag to decide whether add slave node in 
+/* The flag to decide whether add slave node in
   * redisClusterContext->nodes. This is set in the
-  * least significant bit of the flags field in 
+  * least significant bit of the flags field in
   * redisClusterContext. (1000000000000) */
 #define HIRCLUSTER_FLAG_ADD_SLAVE           0x1000
-/* The flag to decide whether add open slot  
+/* The flag to decide whether add open slot
   * for master node. (10000000000000) */
 #define HIRCLUSTER_FLAG_ADD_OPENSLOT        0x2000
-/* The flag to decide whether get the route 
-  * table by 'cluster slots' command. Default   
+/* The flag to decide whether get the route
+  * table by 'cluster slots' command. Default
   * is 'cluster nodes' command.*/
 #define HIRCLUSTER_FLAG_ROUTE_USE_SLOTS     0x4000
 
 struct dict;
 struct hilist;
+
+typedef struct connection_pool
+{
+    uint8_t ver;
+    uint8_t init_size;
+    uint8_t cur_size;
+    uint8_t max_size;
+    uint8_t idle_live_time;
+    uint8_t lock;
+    uint16_t reserve;
+    struct hilist *conns; /* redisContext* */
+} connection_pool;
 
 typedef struct cluster_node
 {
@@ -41,7 +53,7 @@ typedef struct cluster_node
     int port;
     uint8_t role;
     uint8_t myself;   /* myself ? */
-    redisContext *con;
+    connection_pool *pool;
     redisAsyncContext *acon;
     struct hilist *slots;
     struct hilist *slaves;
@@ -49,14 +61,14 @@ typedef struct cluster_node
     void *data;     /* Not used by hiredis */
     struct hiarray *migrating;  /* copen_slot[] */
     struct hiarray *importing;  /* copen_slot[] */
-}cluster_node;
+} cluster_node;
 
 typedef struct cluster_slot
 {
     uint32_t start;
     uint32_t end;
     cluster_node *node; /* master that this slot region belong to */
-}cluster_slot;
+} cluster_slot;
 
 typedef struct copen_slot
 {
@@ -64,14 +76,15 @@ typedef struct copen_slot
     int migrate;        /* migrating or importing? */
     sds remote_name;    /* name for the node that this slot migrating to/importing from */
     cluster_node *node; /* master that this slot belong to */
-}copen_slot;
+} copen_slot;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* Context for a connection to Redis cluster */
-typedef struct redisClusterContext {
+typedef struct redisClusterContext
+{
     int err; /* Error flags, 0 when there is no error */
     char errstr[128]; /* String representation of error when applicable */
     sds ip;
@@ -83,11 +96,11 @@ typedef struct redisClusterContext {
     struct timeval *connect_timeout;
 
     struct timeval *timeout;    /* receive and send timeout. */
-    
-    struct hiarray *slots;
 
-    struct dict *nodes;
-    cluster_node *table[REDIS_CLUSTER_SLOTS];
+    struct hiarray *slots; /* slot info array */
+
+    struct dict *nodes; /* master node; k:addr v:obj */
+    cluster_node *table[REDIS_CLUSTER_SLOTS]; /* master node array */
 
     uint64_t route_version;
 
@@ -101,8 +114,8 @@ typedef struct redisClusterContext {
 } redisClusterContext;
 
 redisClusterContext *redisClusterConnect(const char *addrs, int flags);
-redisClusterContext *redisClusterConnectWithTimeout(const char *addrs, 
-    const struct timeval tv, int flags);
+redisClusterContext *redisClusterConnectWithTimeout(const char *addrs,
+        const struct timeval tv, int flags);
 redisClusterContext *redisClusterConnectNonBlock(const char *addrs, int flags);
 
 redisClusterContext *redisClusterContextInit(void);
@@ -142,7 +155,10 @@ int test_cluster_update_route(redisClusterContext *cc);
 struct dict *parse_cluster_nodes(redisClusterContext *cc, char *str, int str_len, int flags);
 struct dict *parse_cluster_slots(redisClusterContext *cc, redisReply *reply, int flags);
 
-
+int redisClusterEval(redisClusterContext *cc, char **out_buf, const char *script, const char *keys[], size_t keys_num, const char *args[], size_t args_num);
+int redisClusterScriptLoad(redisClusterContext *cc, char **out_buf, const char *script, const char *sample_key);
+int redisClusterEvalSha(redisClusterContext *cc, char **out_buf, const char *sha, const char *keys[], size_t keys_num, const char *args[], size_t args_num);
+int redisClusterScriptFlush(redisClusterContext *cc);
 /*############redis cluster async############*/
 
 struct redisClusterAsyncContext;
@@ -152,8 +168,9 @@ typedef int (adapterAttachFn)(redisAsyncContext*, void*);
 typedef void (redisClusterCallbackFn)(struct redisClusterAsyncContext*, void*, void*);
 
 /* Context for an async connection to Redis */
-typedef struct redisClusterAsyncContext {
-    
+typedef struct redisClusterAsyncContext
+{
+
     redisClusterContext *cc;
 
     /* Setup error flags so they can be used directly. */
@@ -184,7 +201,6 @@ int redisClusterAsyncCommand(redisClusterAsyncContext *acc, redisClusterCallback
 int redisClusterAsyncCommandArgv(redisClusterAsyncContext *acc, redisClusterCallbackFn *fn, void *privdata, int argc, const char **argv, const size_t *argvlen);
 void redisClusterAsyncDisconnect(redisClusterAsyncContext *acc);
 void redisClusterAsyncFree(redisClusterAsyncContext *acc);
-
 redisAsyncContext *actx_get_by_node(redisClusterAsyncContext *acc, cluster_node *node);
 
 #ifdef __cplusplus
