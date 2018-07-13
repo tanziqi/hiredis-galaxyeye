@@ -268,6 +268,26 @@ static int cluster_reply_error_type(redisReply *reply)
     return CLUSTER_NOT_ERR;
 }
 
+static void free_redis_conn(void *ptr)
+{
+    redisFree((redisContext *)ptr);
+}
+
+static void clean_node_pool(cluster_node *node)
+{
+    if(node == NULL || node->pool == NULL)
+    {
+        return ;
+    }
+
+    node->pool->conns->free = free_redis_conn;
+    listRelease(node->pool->conns);
+    free(node->pool);
+    node->pool = NULL;
+
+    return ;
+}
+
 static int
 node_init_conn_pool(connection_pool **pool)
 {
@@ -277,6 +297,7 @@ node_init_conn_pool(connection_pool **pool)
         return -1;
     }
 
+    (*pool)->ver = 0;
     (*pool)->init_size = 1;
     (*pool)->cur_size = 0;
     (*pool)->max_size = 2;
@@ -303,6 +324,7 @@ cluster_init_conn_pool(dict *nodes)
         ret = node_init_conn_pool(&(node->pool));
         assert(ret == 0);
     }
+    dictReleaseIterator(it);
     return ;
 }
 
@@ -349,7 +371,7 @@ static void cluster_node_deinit(cluster_node *node)
 
     if(node->pool != NULL)
     {
-        //redisFree(node->con);
+        clean_node_pool(node);
     }
 
     if(node->acon != NULL)
@@ -2659,25 +2681,6 @@ int redisClusterConnect2(redisClusterContext *cc)
     return _redisClusterConnect2(cc);
 }
 
-void clean_node_pool(cluster_node *node)
-{
-    if(node == NULL || node->pool == NULL)
-    {
-        return ;
-    }
-
-    listNode *element = NULL;
-    listIter *it = listGetIterator(node->pool->conns, AL_START_HEAD);
-    while((element = listNext(it)) != NULL)
-    {
-        redisFree((redisContext *)(element->value));
-    }
-    free(node->pool);
-    node->pool = NULL;
-
-    return ;
-}
-
 int ctx_create_put_to_pool(redisClusterContext *cc, cluster_node *node)
 {
     int ret = 0;
@@ -4321,7 +4324,7 @@ int redisClusterEval(redisClusterContext *cc, char **out_buf, const char *script
 {
     size_t idx = 0;
     size_t argc = 1 + 1 + 1 + keys_num + args_num;
-    char **argv = (char **)malloc(sizeof(char *) * argc);
+    const char **argv = (const char **)malloc(sizeof(char *) * argc);
     if(!argv)
     {
         return -1;
@@ -4411,7 +4414,7 @@ int redisClusterEvalSha(redisClusterContext *cc, char **out_buf, const char *sha
 {
     size_t idx = 0;
     size_t argc = 1 + 1 + 1 + keys_num + args_num;
-    char **argv = (char **)malloc(sizeof(char *) * argc);
+    const char **argv = (const char **)malloc(sizeof(char *) * argc);
     if(!argv)
     {
         return -1;
